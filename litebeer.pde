@@ -39,7 +39,8 @@ const int REST  = 2;
 
 int joystick=0;
 int state = REST;
-boolean isTrain=false;
+int trainState=REST;
+boolean exitTrain=false;
 
 void setup(){
   xyservo.attach(xyservopin);
@@ -52,9 +53,9 @@ void setup(){
   memory_drink_xy = EEPROM.read(eeprom_drink_xy);
   memory_drink_z = EEPROM.read(eeprom_drink_z);
 
-  Serial.print("XY chill = ");
+  Serial.print("XY rest = ");
   Serial.print(memory_chill_xy);
-  Serial.print("\n Z chill = ");
+  Serial.print("\n Z rest = ");
   Serial.print(memory_chill_z);
   Serial.print("\n XY drink = ");
   Serial.print(memory_drink_xy);
@@ -68,11 +69,14 @@ void setup(){
   if(memory_drink_xy >= 180) { memory_drink_xy = 0;}
   if(memory_drink_z  >= 180) { memory_drink_z = 0;}  
  
+  //slow way
   //setPitch(memory_chill_z);
   //setAngle(memory_chill_xy);
-  zservo1.write(memory_chill_z);
-  zservo2.write(OFFSET-memory_chill_z);            
-  xyservo.write(memory_chill_xy);
+  
+  //fast way
+  //zservo1.write(memory_chill_z);
+  //zservo2.write(OFFSET-memory_chill_z);            
+  //xyservo.write(memory_chill_xy);
   
   pinMode(drinkpin, INPUT);
 }
@@ -83,55 +87,96 @@ void loop(){
       
       // normal operation
       if(digitalRead(drinkpin) == 1 || serialIn=='b'){
-
+        
+        changeState();
+        
+      }else if(serialIn=='t'){
+        
+        train();
+        
       }
-      
 }
 
 void changeState(){
    if(state==REST){
     Serial.println("Normal button- raising for drink");
 
-    setPitch(memory_drink_z);
-    setAngle(memory_drink_xy);
+    //setPitch(memory_drink_z);
+    //setAngle(memory_drink_xy);
     
     state = DRINK;
     debounce(drinkpin);
   }else if(state== DRINK){
     Serial.println("Normal button- lowering to rest");
 
-    setPitch(memory_chill_z);
-    setAngle(memory_chill_xy);          
+    //setPitch(memory_chill_z);
+    //setAngle(memory_chill_xy);          
     
     state = REST;
     debounce(drinkpin);
   }
 }
 
-char inByte=0;
 void train(){
-  if (Serial.available() > 0) {
-    inByte = Serial.read();
-   switch(inByte){
-     case 'a':
-       Serial.print("plus xy");
-       break;
-     case 'z':
-       Serial.print("minus xy");
-       break;
-     case 's':
-       Serial.print("plus z");
-       break;
-     case 'x':
-       Serial.print("minus z");
-       break;
-     case 'b':
-       Serial.print("switch!");
-       break;
-      default:
-      Serial.print("dont know: ");
-      Serial.print(inByte);
-    } 
+  exitTrain=false;
+  Serial.println("training");
+  Serial.println("train rest");
+  Serial.println("axis +/- 'a','z','s','x'. switch 'b'. remind 'r'. save 'q'. exit 't'.");
+  
+  while(!exitTrain){
+    if (Serial.available() > 0) {
+       serialIn = Serial.read();
+       switch(serialIn){
+         case 'a':
+           Serial.println("plus xy");
+           break;
+         case 'z':
+           Serial.println("minus xy");
+           break;
+         case 's':
+           Serial.println("plus z");
+           break;
+         case 'x':
+           Serial.println("minus z");
+           break;
+         case 'b':
+           if(trainState==REST){
+             Serial.println("switch to drink");
+             trainState=DRINK;
+             //TODO: goto Drink
+           }else{
+             Serial.println("switch to rest");
+             trainState=REST;
+             //TODO: goto Rest
+           }
+           break;
+         case 'r':
+           if(trainState==REST){
+             Serial.println("reminder: rest");
+           }else{
+             Serial.println("reminder: drink");
+           }
+         break;
+         case 'q':
+           if(trainState==REST){
+             Serial.println("save to rest");
+             //TODO:save to rest
+           }else{
+             Serial.println("save to drink");
+             //TODO:save to drink
+           }
+           break;
+         case 't':
+           Serial.println("exit train");
+           exitTrain=true;
+           break;
+        default:
+          Serial.print("dont know: ");
+          Serial.print(serialIn);
+          Serial.println("");
+           break;
+        } 
+    }
   }
 }
 
