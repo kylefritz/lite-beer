@@ -18,3 +18,7 @@ loss. Another button enters training mode, which steps through
 programming all settings. A LED light indicates what is being
 programmed, and a three-pole switch is used to turn that specific motor
 (or motors) each direction to adjust the arm in that axis.
+
+
+##Contributors
+Kevin Fritz, Kyle Fritz, Mike O'Neill & Nate McBean

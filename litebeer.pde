@@ -8,13 +8,6 @@ char serialIn;
 /****** Pin declarations ******/
 // drink / return drink
 const int drinkpin        = 2; /* red dot */
-const int trainpin        = 8; /* microswitch */
-const int joystick_up     = 3;
-const int joystick_down   = 4;
-
-const int led_r           = 11;
-const int led_g           = 12;
-const int led_b           = 13;
 
 // servos
 const int xyservopin =7;
@@ -42,17 +35,10 @@ const int SERVO_Z = 1;
 int currentServo;
 
 const int DRINK  = 1;
-const int CHILL  = 2;
-
-const int TRAIN_CHILL_XY=3;
-const int TRAIN_CHILL_Z=4;
-const int TRAIN_DRINK_XY=5;
-const int TRAIN_DRINK_Z =6; 
-const int EXIT=7; 
+const int REST  = 2;
 
 int joystick=0;
-int state = CHILL;
-int trainstate = TRAIN_CHILL_XY;
+int state = REST;
 boolean isTrain=false;
 
 void setup(){
@@ -89,12 +75,6 @@ void setup(){
   xyservo.write(memory_chill_xy);
   
   pinMode(drinkpin, INPUT);
-  pinMode(trainpin, INPUT);
-  
-  pinMode(led_r, OUTPUT);
-  pinMode(led_g, OUTPUT);
-  pinMode(led_b, OUTPUT);
-  
 }
 
 
@@ -102,26 +82,62 @@ void loop(){
       serialIn = Serial.read();
       
       // normal operation
-      if((!isTrain && digitalRead(drinkpin) == 1) || (!isTrain && serialIn=='d')){
-        if(state==CHILL){
-          Serial.println("Normal button- raising for drink");
+      if(digitalRead(drinkpin) == 1 || serialIn=='b'){
 
-          setPitch(memory_drink_z);
-          setAngle(memory_drink_xy);
-          
-          state = DRINK;
-          debounce(drinkpin);
-        }else if(state== DRINK){
-          Serial.println("Normal button- lowering to chill");
-
-          setPitch(memory_chill_z);
-          setAngle(memory_chill_xy);          
-          
-          state = CHILL;
-          debounce(drinkpin);
-        }
       }
       
+}
+
+void changeState(){
+   if(state==REST){
+    Serial.println("Normal button- raising for drink");
+
+    setPitch(memory_drink_z);
+    setAngle(memory_drink_xy);
+    
+    state = DRINK;
+    debounce(drinkpin);
+  }else if(state== DRINK){
+    Serial.println("Normal button- lowering to rest");
+
+    setPitch(memory_chill_z);
+    setAngle(memory_chill_xy);          
+    
+    state = REST;
+    debounce(drinkpin);
+  }
+}
+
+char inByte=0;
+void train(){
+  if (Serial.available() > 0) {
+    inByte = Serial.read();
+   switch(inByte){
+     case 'a':
+       Serial.print("plus xy");
+       break;
+     case 'z':
+       Serial.print("minus xy");
+       break;
+     case 's':
+       Serial.print("plus z");
+       break;
+     case 'x':
+       Serial.print("minus z");
+       break;
+     case 'b':
+       Serial.print("switch!");
+       break;
+      default:
+      Serial.print("dont know: ");
+      Serial.print(inByte);
+    } 
+  }
+}
+
+/*
+
+
       //training state machine
       if(digitalRead(trainpin) == 1){
         isTrain=true;
@@ -197,7 +213,7 @@ void loop(){
         debounce(trainpin);
         
       }
-      
+
       //training joystick
       if(isTrain){
         if(digitalRead(joystick_up) == 1){
@@ -222,35 +238,14 @@ void loop(){
           }
         }
       }
-}
+*/
 
 void debounce(int pin){
   delay(50);
  while(digitalRead(pin)==1){delay(50);} 
 }
 
-void LEDcolor(int colorsetting){
-  digitalWrite(led_r,LOW);
-  digitalWrite(led_g,LOW);
-  digitalWrite(led_b,LOW);
-
-  switch (colorsetting) {
-    case TRAIN_CHILL_Z:
-      digitalWrite(led_r,HIGH);
-      break;
-    case TRAIN_DRINK_XY:
-      digitalWrite(led_g,HIGH);
-      break;
-    case TRAIN_DRINK_Z:
-      digitalWrite(led_b,HIGH);
-      break;      
-    case EXIT:
-      digitalWrite(led_g,HIGH);
-      digitalWrite(led_r,HIGH);
-      break;    
-    default: break;
-  } 
-}
+const int PITCH_DELAY=50;
 
 void setPitch(int angle){
   int startangle = zservo1.read();
@@ -265,19 +260,18 @@ void setPitch(int angle){
     for(int i=startangle; i>angle; i-=2){
       zservo1.write(i);
       zservo2.write(OFFSET-i);
-      delay(50);
+      delay(PITCH_DELAY);
     }
   }else{
     for(int i=startangle; i<angle; i+=2){
       zservo1.write(i);
       zservo2.write(OFFSET-i);
-      delay(50);
-      //Serial.println(xyservo.read());
+      delay(PITCH_DELAY);
     }
   }
-  //zservo1.write(angle);
-  //zservo2.write(OFFSET-angle);
 }
+
+const int ANGLE_DELAY=50;
 
 void setAngle(int angle){
   int startangle = xyservo.read();
@@ -292,14 +286,13 @@ void setAngle(int angle){
   if(angle<startangle){
     for(i=startangle; i>angle; i-=2){
       xyservo.write(i); 
-      delay(50);
+      delay(ANGLE_DELAY);
     }
   }else{
     for(i=startangle; i<angle; i+=2){
       xyservo.write(i); 
-      delay(50);
+      delay(ANGLE_DELAY);
     }
   }
-  //xyservo.write(angle);
 }
 
