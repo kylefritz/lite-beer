@@ -59,15 +59,7 @@ void setup(){
   memory_drink_xy = EEPROM.read(eeprom_drink_xy);
   memory_drink_z = EEPROM.read(eeprom_drink_z);
 
-  Serial.print("XY rest = ");
-  Serial.print(memory_rest_xy);
-  Serial.print("\nZ rest = ");
-  Serial.print(memory_rest_z);
-  Serial.print("\nXY drink = ");
-  Serial.print(memory_drink_xy);
-  Serial.print("\nZ drink = ");
-  Serial.print(memory_drink_z);
-  Serial.print("\n");
+  printStates();
 
   /* If eeprom has no values yet... */
   if(memory_rest_xy >= 180) { memory_rest_xy = 0;}
@@ -89,6 +81,7 @@ void loop(){
     if(digitalRead(drinkpin) == 1 || serialIn=='b'){
       
       changeState();
+      debounce(drinkpin);
       
     }else if(serialIn=='t'){
       
@@ -104,15 +97,25 @@ void changeState(){
     setPitchAngle(memory_drink_z,memory_drink_xy);
     
     state = DRINK;
-    debounce(drinkpin);
   }else if(state== DRINK){
     Serial.println("Normal button- lowering to rest");
 
     setPitchAngle(memory_rest_z,memory_rest_xy);          
     
     state = REST;
-    debounce(drinkpin);
   }
+}
+
+void printStates(){
+  Serial.print("XY rest = ");
+  Serial.print(memory_rest_xy);
+  Serial.print("\nZ rest = ");
+  Serial.print(memory_rest_z);
+  Serial.print("\nXY drink = ");
+  Serial.print(memory_drink_xy);
+  Serial.print("\nZ drink = ");
+  Serial.print(memory_drink_z);
+  Serial.print("\n");
 }
 
 void train(){
@@ -150,13 +153,17 @@ void train(){
              Serial.println("switch to drink");
              trainState=DRINK;
              //goto
-             setPitchAngle(memory_drink_z,memory_drink_xy);
+             trainAngle=memory_drink_xy;
+             trainPitch=memory_drink_z;
            }else{
              Serial.println("switch to rest");
              trainState=REST;
              //goto Rest
-             setPitchAngle(memory_rest_z,memory_rest_xy);
+             trainAngle=memory_rest_xy;
+             trainPitch=memory_rest_z;
            }
+           
+           setPitchAngle(trainPitch,trainAngle);
            break;
          case 'r':
            if(trainState==REST){
@@ -182,6 +189,7 @@ void train(){
              memory_drink_xy = trainAngle;
              memory_drink_z  = trainPitch;
            }
+           printStates();
            break;
          case 't':
            Serial.println("exit train");
@@ -203,6 +211,12 @@ void debounce(int pin){
 }
 
 void setPitch(int angle){
+  zservo1.write(angle);
+  zservo2.write(OFFSET-angle);
+  Serial.print("pitch: ");
+  Serial.print(angle);
+  Serial.print("\n");
+  /*
   int startangle = zservo1.read();
   
   Serial.print("Starting pitch ");
@@ -224,9 +238,15 @@ void setPitch(int angle){
       delay(PITCH_DELAY);
     }
   }
+  */
 }
 
 void setAngle(int angle){
+  xyservo.write(angle); 
+  Serial.print("angle: ");
+  Serial.print(angle);
+  Serial.print("\n");
+  /*
   int startangle = xyservo.read();
   int i;
 
@@ -247,10 +267,14 @@ void setAngle(int angle){
       delay(ANGLE_DELAY);
     }
   }
+  */
 }
 
 void setPitchAngle(int pitch,int angle){
    setPitch(pitch);
    setAngle(angle);
+   trainAngle=angle;
+   trainPitch=pitch;
+   Serial.println("done");
 }
 
